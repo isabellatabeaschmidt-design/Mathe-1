@@ -38,6 +38,14 @@ DARK_CSS = """
 }
 .block-container { padding-top: 2.2rem; }
 h1, h2, h3 { letter-spacing: -0.01em; }
+div[class*="st-key-box-"] {
+  background: var(--box-bg); border-radius: 8px;
+  padding: 0.9rem 1.1rem; margin: 0.6rem 0;
+}
+div[class*="st-key-box-mk"] { border-left: 4px solid var(--teal); }
+div[class*="st-key-box-wb"] { border-left: 4px solid var(--warn); }
+div[class*="st-key-box-rz"] { border-left: 4px solid var(--accent); }
+div[class*="st-key-box-ms"] { border: 1px dashed var(--box-border); }
 .merkkasten {
   background: var(--box-bg); border-left: 4px solid var(--teal);
   border-radius: 8px; padding: 0.9rem 1.1rem; margin: 0.6rem 0;
@@ -109,21 +117,31 @@ st.markdown(DARK_CSS if st.session_state.dark_mode else LIGHT_CSS, unsafe_allow_
 # UI-Bausteine
 # ----------------------------------------------------------------------------
 
+import itertools
+_BOX_COUNTER = itertools.count()
+
+def _boxify(md: str) -> str:
+    """HTML-Reste in Markdown umwandeln, damit KaTeX ($…$) rendert."""
+    return (md.replace("<b>", "**").replace("</b>", "**")
+              .replace("<i>", "*").replace("</i>", "*")
+              .replace("&nbsp;", "\u00A0")
+              .replace("<br><br>", "\n\n").replace("<br>", "  \n"))
+
+def _box(md: str, titel: str, icon: str, kind: str):
+    with st.container(key=f"box-{kind}-{next(_BOX_COUNTER)}"):
+        st.markdown(f"**{icon} {titel}**  \n{_boxify(md)}")
+
 def merkkasten(md: str, titel: str = "Merkkasten"):
-    st.markdown(f'<div class="merkkasten"><b>🧠 {titel}</b><br>{md}</div>',
-                unsafe_allow_html=True)
+    _box(md, titel, "🧠", "mk")
 
 def warnbox(md: str, titel: str = "Typischer Fehler"):
-    st.markdown(f'<div class="warnbox"><b>⚠️ {titel}</b><br>{md}</div>',
-                unsafe_allow_html=True)
+    _box(md, titel, "⚠️", "wb")
 
 def rezept(md: str, titel: str = "Kochrezept"):
-    st.markdown(f'<div class="rezept"><b>👩‍🍳 {titel}</b><br>{md}</div>',
-                unsafe_allow_html=True)
+    _box(md, titel, "👩‍🍳", "rz")
 
 def musterbox(md: str, titel: str = "Mustererkennung — Wenn … dann …"):
-    st.markdown(f'<div class="muster"><b>🔍 {titel}</b><br>{md}</div>',
-                unsafe_allow_html=True)
+    _box(md, titel, "🔍", "ms")
 
 def kicker(text: str):
     st.markdown(f'<div class="kicker">{text}</div>', unsafe_allow_html=True)
@@ -414,7 +432,10 @@ def render_task_input(task: dict, key: str):
             with c1:
                 st.markdown(f"**{lab}**")
             with c2:
-                st.latex(opt) if any(ch in opt for ch in "\\^_{") else st.markdown(opt)
+                if any(ch in opt for ch in "\\^_{"):
+                    st.latex(opt)
+                else:
+                    st.markdown(opt)
         wahl = st.radio("Deine Antwort", labels, index=None, horizontal=True,
                         key=f"{key}_mc")
         if wahl is None:
